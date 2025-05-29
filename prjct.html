@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather Pulse – Saisree Thulluru</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #f7fbff, #e3f2fd);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    h1 {
+      font-size: 2.8rem;
+      margin-bottom: 1.5rem;
+      color: #111;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 2rem;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 800px;
+    }
+    .search-bar {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+    input {
+      flex: 1 1 65%;
+      padding: 0.9rem;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      font-size: 1rem;
+      min-width: 220px;
+      background: #f8f9fa;
+    }
+    button {
+      background: #90caf9;
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      padding: 0.8rem 1.2rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.3s ease;
+    }
+    button:hover {
+      background: #64b5f6;
+    }
+    .weather-display, .forecast { margin-top: 1.5rem; }
+    .forecast-grid {
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+    .forecast-day {
+      background: #e3f2fd;
+      padding: 1rem;
+      border-radius: 16px;
+      text-align: center;
+      flex: 1 0 28%;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    }
+    img { width: 60px; }
+    .about {
+      margin-top: 1.5rem;
+      font-size: 0.95rem;
+      text-align: center;
+      color: #555;
+    }
+    .about a {
+      color: #0077cc;
+      text-decoration: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🌦️ Weather Pulse – Saisree Thulluru</h1>
+  <div class="card">
+    <div class="search-bar">
+      <input id="location" placeholder="🔍 Enter City, Zip, or Lat,Lon"/>
+      <button onclick="fetchWeather()">☁️ Search</button>
+      <button onclick="getLocation()">📍</button>
+    </div>
+
+    <div id="weather" class="weather-display"></div>
+    <div id="forecast" class="forecast"></div>
+    <div class="about">
+      ℹ️ <strong>About PM Accelerator:</strong><br />
+      Helping product managers and software pros grow fast. <br />
+      <a href="https://www.linkedin.com/company/product-manager-accelerator/" target="_blank">Visit LinkedIn →</a>
+    </div>
+  </div>
+
+  <script>
+    const API_KEY = 'f35f4730ab00d54ebb0a159680f6ac5b';
+
+    function fetchWeather() {
+      const input = document.getElementById('location').value;
+      if (!input) return alert('Please enter a location');
+
+      const isCoords = input.includes(',');
+      let urlCurr, urlForecast;
+      if (isCoords) {
+        const [lat, lon] = input.split(',');
+        urlCurr = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+        urlForecast = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&units=metric&appid=${API_KEY}`;
+      } else {
+        urlCurr = `https://api.openweathermap.org/data/2.5/weather?q=${input}&units=metric&appid=${API_KEY}`;
+        urlForecast = `https://api.openweathermap.org/data/2.5/forecast?q=${input}&units=metric&appid=${API_KEY}`;
+      }
+
+      Promise.all([fetch(urlCurr), fetch(urlForecast)])
+        .then(async ([res1, res2]) => {
+          const curr = await res1.json();
+          const forecast = await res2.json();
+          showCurrent(curr);
+          showForecast(forecast);
+        })
+        .catch(err => {
+          alert('❌ Failed to fetch weather data.');
+        });
+    }
+
+    function getLocation() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(pos => {
+          const { latitude, longitude } = pos.coords;
+          document.getElementById('location').value = `${latitude},${longitude}`;
+          fetchWeather();
+        }, () => {
+          alert('⚠️ Unable to retrieve location.');
+        });
+      } else {
+        alert('⚠️ Geolocation not supported.');
+      }
+    }
+
+    function showCurrent(data) {
+      if (data.cod !== 200) {
+        document.getElementById('weather').innerHTML = `<p>${data.message}</p>`;
+        return;
+      }
+      const icon = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+      document.getElementById('weather').innerHTML = `
+        <h2>🌡️ Current Weather - ${data.name}</h2>
+        <p><img src="${icon}" alt=""> ${data.weather[0].main} (${data.weather[0].description})</p>
+        <p><strong>${data.main.temp}°C</strong> (Feels like: ${data.main.feels_like}°C)</p>
+        <p>💧 Humidity: ${data.main.humidity}% | 🌫️ Wind: ${data.wind.speed} m/s</p>
+      `;
+    }
+
+    function showForecast(data) {
+      if (data.cod !== "200") {
+        document.getElementById('forecast').innerHTML = `<p>${data.message}</p>`;
+        return;
+      }
+      const noons = data.list.filter(i => i.dt_txt.includes('12:00:00')).slice(0, 5);
+      let html = '<h2>🔮 5-Day Forecast</h2><div class="forecast-grid">';
+      noons.forEach(item => {
+        const date = new Date(item.dt * 1000).toLocaleDateString();
+        const icon = `https://openweathermap.org/img/wn/${item.weather[0].icon}.png`;
+        html += `
+          <div class="forecast-day">
+            <h4>${date}</h4>
+            <img src="${icon}" alt="">
+            <p>${item.weather[0].main}</p>
+            <p>${item.main.temp}°C</p>
+          </div>
+        `;
+      });
+      html += '</div>';
+      document.getElementById('forecast').innerHTML = html;
+    }
+  </script>
+</body>
+</html>
